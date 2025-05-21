@@ -55,7 +55,7 @@ def webhook():
     return "!", 200
 
 # тестовый вывод проброса api gateway
-@app.route('/flask_test')
+@application.route('/flask_test')
 def hello():
     return 'Hello, World mother great again!'
 
