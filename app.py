@@ -1,6 +1,8 @@
 from flask import Flask
-
 from methods import access
+
+token = access.token()
+api = access.api()
 
 application = Flask(__name__)
 
