@@ -1,2 +1,4 @@
-export FLASK_APP=data-avocado-bot/app.py && export FLASK_DEBUG=true
+export FLASK_APP=app.py && export FLASK_DEBUG=true
+echo $FLASK_APP
+export TELEGRAM_TOKEN=
 nohup flask run   --host=0.0.0.0 > /dev/null 2>&1

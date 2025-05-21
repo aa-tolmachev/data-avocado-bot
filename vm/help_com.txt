@@ -1,0 +1,2 @@
+ps aux | grep flask
+kill -9 41182
