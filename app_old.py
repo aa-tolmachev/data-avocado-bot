@@ -122,7 +122,6 @@ def main():
 
         print(json_update)
 
-
         #Изначально для отправки кнопки пустые
         reply_markup = None
         #главное меню
