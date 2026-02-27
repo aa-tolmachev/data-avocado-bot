@@ -8,10 +8,12 @@ api = access.api()
 application = Flask(__name__)
 
 
-#тест 
-@application.route('/flask_test')
-def hello():
-    return 'Hello, World!'
+# импортируем вынесенные обработчики
+from tests.init_tests import hello, check_params
+
+
+#тест ответа
+application.add_url_rule('/flask_test', 'hello', hello)
 
 
 
@@ -29,3 +31,6 @@ def webhook():
     print(r.status_code)
     print(r.text)
     return "!", 200
+
+
+application.add_url_rule('/check_params', 'check_params', check_params, methods=['GET', 'POST'])
