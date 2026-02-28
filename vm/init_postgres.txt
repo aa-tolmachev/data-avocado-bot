@@ -1,0 +1,19 @@
+ssh root@ваш_ip
+sudo apt update && sudo apt upgrade -y
+sudo apt install postgresql postgresql-contrib -y
+sudo systemctl status postgresql
+sudo -u postgres psql
+sudo nano /etc/postgresql/*/main/postgresql.conf
+#Найдите и измените: listen_addresses = '*' раскоментить если нужно
+sudo nano /etc/postgresql/*/main/pg_hba.conf
+#в концедобавляем host    all             all             ваш_ip_внешний_машины/32            md5
+sudo systemctl restart postgresql
+sudo ufw allow 5432/tcp
+sudo ufw reload
+sudo ufw allow from ваш_ip_внешний_машины to any port 5432
+sudo -i -u postgres
+#если с сервераpsql
+#если с локального компа psql -h ваш_ip -U postgres -d postgres
+
+#в постгре делаем пользователя
+#ALTER USER postgres PASSWORD 'новый_пароль';
