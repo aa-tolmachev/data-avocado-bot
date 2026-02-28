@@ -1,7 +1,10 @@
 from flask import Flask
+from dotenv import load_dotenv
+load_dotenv()
 from methods import access
 import requests
 
+# load environment-dependent tokens/configs
 token = access.token()
 api = access.api()
 
