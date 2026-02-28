@@ -1,14 +1,40 @@
 from flask import Flask
+from flask import request
 from dotenv import load_dotenv
 load_dotenv()
 from methods import access
 import requests
+import json
+
+import traceback
+
+from methods import access
+from methods import crypto
+from methods.emoji import emoji
+from methods import telegram_bot_methods
+from methods import google_maps_methods
+from methods import psql_methods
+from methods import psql_cron_methods
+from methods import reply
+
+from dicts import meta_info
+
+from dialog_branch import *
+import dialog_branch as dibr
+
+from router import *
+import router as router
+
+
 
 # load environment-dependent tokens/configs
 token = access.token()
 api = access.api()
 
 application = Flask(__name__)
+
+#главное меню делаем глобальной переменной
+g_reply_markup_main = meta_info.reply_markup_main
 
 
 # импортируем вынесенные обработчики
