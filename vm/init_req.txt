@@ -3,4 +3,5 @@ sudo apt install python3-pip
 pip install flask --break-system-packages
 pip install pandas --break-system-packages
 pip install psycopg2-binary --break-system-packages
-pip install python-dotenv
+pip install python-dotenv --break-system-packages
+pip install matplotlib --break-system-packages
