@@ -22,11 +22,11 @@ def google_maps_api_key():
 
 #heroku PSQL
 def PSQL_heroku_keys():
-	dbname = os.getenv('HEROKU_PSQL_DBNAME')
+	dbname = os.getenv('PSQL_DBNAME')
 	port = '5432'
-	user = os.getenv('HEROKU_PSQL_USER')
-	host = os.getenv('HEROKU_PSQL_HOST')
-	password = os.getenv('HEROKU_PSQL_PASS')
+	user = os.getenv('PSQL_USER')
+	host = os.getenv('PSQL_HOST')
+	password = os.getenv('PSQL_PASS')
 
 	PSQL_heroku_keys = {'dbname' : dbname
 						, 'port' : port
