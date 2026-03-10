@@ -1,9 +1,10 @@
+cd data-avocado-bot
 export FLASK_APP=app.py && export FLASK_DEBUG=true
-echo $FLASK_APP
-export TELEGRAM_TOKEN=
-export PSQL_DBNAME=
-export PSQL_USER=
-export PSQL_HOST=
-export PSQL_PASS=
-echo $TELEGRAM_TOKEN
+
+#запускаем без логов
 nohup flask run   --host=0.0.0.0 > /dev/null 2>&1
+#запускаем с логами в файлик 
+nohup flask run --host=0.0.0.0 >> tmp.log 2>&1 &
+
+#посмотреть последние логи
+tail -n 50 tmp.log

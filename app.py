@@ -15,6 +15,7 @@ from methods import telegram_bot_methods
 from methods import google_maps_methods
 from methods import psql_methods
 from methods import psql_cron_methods
+from methods import psql_watch_methods
 from methods import reply
 
 from dicts import meta_info
@@ -39,12 +40,11 @@ g_reply_markup_main = meta_info.reply_markup_main
 
 # импортируем вынесенные обработчики
 from tests.init_tests import hello, check_params
-
-
 #тест ответа
 application.add_url_rule('/flask_test', 'hello', hello)
 #тест вывода параметров
 application.add_url_rule('/check_params', 'check_params', check_params, methods=['GET', 'POST'])
+
 
 
 # создаем webhook
@@ -61,6 +61,35 @@ def webhook():
     print(r.status_code)
     print(r.text)
     return "!", 200
+
+
+
+
+
+#вызов от внешнего апи для записи активности
+@application.route('/external_api_worker', methods=['GET', 'POST'])
+def external_api_worker():
+    try:
+        #главное меню
+        global g_reply_markup_main
+        reply_markup_main = g_reply_markup_main
+
+        #берем данные из get запроса
+        user_id = request.args.get('user_id')
+        chat_id = request.args.get('chat_id')
+        activity_type = request.args.get('activity_type')
+        activity_from = request.args.get('activity_from')
+
+        #записываем активность
+        r = psql_watch_methods.track_activity(user_id = user_id, activity_type = activity_type, activity_from = activity_from)
+        text = 'Записана активность - ' + str(activity_type) + ', из ' + str(activity_from)
+        send_result = telegram_bot_methods.send_message(chat_id = chat_id, text = text, reply_markup = reply_markup_main)
+
+
+        return "!", 200
+    except:
+        traceback.print_exc()
+        return "!", 200
 
 
 # запуск основной функции
