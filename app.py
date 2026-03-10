@@ -89,6 +89,42 @@ def external_api_worker():
         return "!", 200
 
 
+#рабочий крон cron-job.org
+@application.route('/cron_woker_1', methods=['GET', 'POST'])
+def cron_worker_1():
+    try:
+        #берем данные из get запроса
+        model = request.args.get("model")
+        #главное меню
+        global g_reply_markup_main
+        reply_markup_main = g_reply_markup_main
+        r = psql_cron_methods.main_woker_1(model = model)
+
+        if 'int' not in str(type(r)):
+            if r['system_message'] == 'Have reports':
+                list_messages = r['user_messages']
+                for message in list_messages:
+                    reply_markup_main = g_reply_markup_main
+
+                    #отправляем сообщение
+                    chat_id = str(message['chat_id'])
+                    text = message['message']
+                    #проверяем, есть ли кастомные кнопки
+                    if 'reply_markup' in message.keys():
+                        reply_markup_main = message['reply_markup']
+
+                    send_result = telegram_bot_methods.send_message(chat_id = chat_id, text = text, reply_markup = reply_markup_main)
+                    #если к сообщению есть картинка, отправляем картинку
+                    if 'photo_path' in message.keys():
+                        photo_path = message['photo_path']
+                        send_result = telegram_bot_methods.send_photo(chat_id = chat_id, photo_path = photo_path)
+
+        return "!", 200
+    except:
+        #тест - для тестирования
+        traceback.print_exc()
+        return "!", 200
+
 # запуск основной функции
 @application.route('/main', methods=['GET', 'POST'])
 def main():

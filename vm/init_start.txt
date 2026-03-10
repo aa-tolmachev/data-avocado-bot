@@ -1,5 +1,6 @@
 cd data-avocado-bot
 export FLASK_APP=app.py && export FLASK_DEBUG=true
+nano .env
 
 #запускаем без логов
 nohup flask run   --host=0.0.0.0 > /dev/null 2>&1
