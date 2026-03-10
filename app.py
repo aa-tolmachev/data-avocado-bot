@@ -1,12 +1,12 @@
 from flask import Flask
 from flask import request
-from dotenv import load_dotenv
-load_dotenv()
-from methods import access
+
 import requests
 import json
-
 import traceback
+
+from dotenv import load_dotenv
+load_dotenv()
 
 from methods import access
 from methods import crypto
@@ -26,17 +26,14 @@ import dialog_branch as dibr
 from router import *
 import router as router
 
+application = Flask(__name__)
 
-
-# load environment-dependent tokens/configs
+#константы общие
 token = access.token()
 api = access.api()
 
-application = Flask(__name__)
-
 #главное меню делаем глобальной переменной
 g_reply_markup_main = meta_info.reply_markup_main
-
 
 # импортируем вынесенные обработчики
 from tests.init_tests import hello, check_params
