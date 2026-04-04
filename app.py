@@ -26,6 +26,8 @@ import dialog_branch as dibr
 from router import *
 import router as router
 
+from exceptions.exc_connection_db_bot import restore_connection
+
 application = Flask(__name__)
 
 #константы общие
@@ -85,6 +87,8 @@ def external_api_worker():
 
         return "!", 200
     except:
+        # восстанавливаем соединение с БД если оно было разорвано
+        restore_connection()
         traceback.print_exc()
         return "!", 200
 
@@ -122,6 +126,8 @@ def cron_worker_1():
         return "!", 200
     except:
         #тест - для тестирования
+        # восстанавливаем соединение с БД если оно было разорвано
+        restore_connection()
         traceback.print_exc()
         return "!", 200
 
@@ -171,6 +177,8 @@ def main():
     except:
 
         #тест - для тестирования
+        # восстанавливаем соединение с БД если оно было разорвано
+        restore_connection()
         traceback.print_exc()
 
         return "!", 200
