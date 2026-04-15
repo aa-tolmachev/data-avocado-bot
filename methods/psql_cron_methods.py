@@ -408,8 +408,8 @@ def today_complete_tasks():
 
 
     #делаем задачи выполненными - верим же людям :)
-    cur.execute("update tasks set flg_done = True where date_task = '%(today_str)s'" % {'today_str' : today_str} )
-    conn.commit()
+    #cur.execute("update tasks set flg_done = True where date_task = '%(today_str)s'" % {'today_str' : today_str} )
+    #conn.commit()
 
     if df_today_tasks.shape[0] == 0:
         cur.close()

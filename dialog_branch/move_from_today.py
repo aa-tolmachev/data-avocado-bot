@@ -25,9 +25,17 @@ def main(command = None , chat_id = None, dict_user_data = None,json_update = No
     keyboard_expense , list_expense_types = reply.list_expense_types()
 
 
-   #5 - переносим  задачи на зватра
-    #отчеты по кошельку
-    if 'Перенеси неважные на завтра' in command:
+    if 'Все задачи выполнил' in command:
+        r = psql_methods.last_state(chat_id, command)
+
+        r = psql_methods.complete_tasks(chat_id=chat_id, dict_user_data=dict_user_data)
+        text = r['text']
+        reply_markup = reply_markup_main if r['reply_markup'] is None else r['reply_markup']
+        r = psql_methods.clear_state(chat_id=chat_id)
+        r = psql_methods.last_state(chat_id, '/main')
+
+    #5 - переносим  задачи на зватра
+    elif 'Перенеси неважные на завтра' in command:
         r = psql_methods.last_state(chat_id,command)
 
         r = psql_methods.move_to_tomorrow(chat_id = chat_id , dict_user_data = dict_user_data)
