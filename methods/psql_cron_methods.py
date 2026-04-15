@@ -84,6 +84,10 @@ def main_woker_1( model = None):
         elif model == 'today_complete_tasks':
             r = today_complete_tasks()
             return r
+        #автоперенос невыполненных задач
+        elif model == 'auto_task_transfer':
+            r = auto_task_transfer()
+            return r
 
     return 200
 
@@ -465,6 +469,116 @@ def today_complete_tasks():
     response['system_message'] = 'Have reports'
     response['user_messages'] = list_messages
 
+
+    #реализовать обработку response в app и отправку сообщений пользователям
+    return response
+
+
+#автоперенос невыполненных главных задач
+def auto_task_transfer():
+
+    #формируем ответ
+    response = {'status' : 200
+                ,'report' : 'auto_task_transfer'
+                ,'message' : 'No reports'
+                ,'tomorrow_messages' : []
+                }
+
+    #получаем даты
+    today_str = today_str_func()
+    tomorrow_str = tomorrow_str_func()
+
+    # создаем запрос
+    cur = conn.cursor()
+
+    #задачи, которые будут перенесены (flg_main=True, flg_done=False, cnt_transfer<4 или null)
+    cur.execute("SELECT * from public.tasks where date_task = '%(today_str)s' and flg_main = True and flg_done = False and coalesce(cnt_transfer,0) < 4" % {'today_str' : today_str} )
+    df_transfer_tasks = DataFrame(cur.fetchall(), columns=[desc[0] for desc in cur.description])
+
+    #задачи, которые считаются автоматически выполненными (на 4-ом переносе)
+    cur.execute("SELECT * from public.tasks where date_task = '%(today_str)s' and flg_main = True and flg_done = False and cnt_transfer = 4" % {'today_str' : today_str} )
+    df_done_tasks = DataFrame(cur.fetchall(), columns=[desc[0] for desc in cur.description])
+
+    #обновляем перенос на следующий день + счетчик переносов
+    cur.execute("update public.tasks set date_task = '%(tomorrow_str)s', cnt_transfer = coalesce(cnt_transfer,0) + 1 where date_task = '%(today_str)s' and flg_main = True and flg_done = False and coalesce(cnt_transfer,0) < 4" % {'today_str' : today_str, 'tomorrow_str' : tomorrow_str} )
+
+    #обновляем флаг выполнения для задач с 4 переносами
+    cur.execute("update public.tasks set flg_done = True where date_task = '%(today_str)s' and flg_main = True and flg_done = False and cnt_transfer = 4" % {'today_str' : today_str} )
+
+    conn.commit()
+
+    if df_transfer_tasks.shape[0] == 0 and df_done_tasks.shape[0] == 0:
+        cur.close()
+        return response
+    else:
+        #формируем список пользователей, кому отправлять сообщение
+        list_user_id = []
+        if df_transfer_tasks.shape[0] > 0:
+            list_user_id += list(df_transfer_tasks['user_id'].unique())
+        if df_done_tasks.shape[0] > 0:
+            list_user_id += list(df_done_tasks['user_id'].unique())
+        list_user_id = list(set(list_user_id))
+
+        if len(list_user_id) == 0:
+            cur.close()
+            return response
+
+        user_id_str = ','.join([str(int(x)) for x in list_user_id])
+        cur.execute("select id , chat_id from public.user where id in (%(user_id_str)s)" % {'user_id_str' : user_id_str} )
+        df_user = DataFrame(cur.fetchall(), columns=[desc[0] for desc in cur.description])
+        cur.close()
+
+    #подгатавливаем лист с сообщениями
+    list_messages = []
+
+    #проходим по пользователям и собираем персональные сообщения
+    for i,row in df_user.iterrows():
+        user_id = row.id
+        chat_id = row.chat_id
+        text = 'Автоматическая обработка задач за сегодня:\n\n'
+
+        #пункт 3: перенос задач на следующий день
+        if df_transfer_tasks.shape[0] > 0:
+            transfer_info = df_transfer_tasks[(df_transfer_tasks.user_id == user_id)][['task']][:]
+            list_transfer_info = list(transfer_info.T.to_dict('list').values())
+            if len(list_transfer_info) > 0:
+                text += 'Перенесены на 1 день:\n'
+                num = 1
+                for task_plan in list_transfer_info:
+                    task_name = task_plan[0]
+                    text += str(num) + ': ' + task_name + '\n'
+                    num += 1
+                text += '\n'
+
+        #пункт 4: задачи автоматически завершены
+        if df_done_tasks.shape[0] > 0:
+            done_info = df_done_tasks[(df_done_tasks.user_id == user_id)][['task']][:]
+            list_done_info = list(done_info.T.to_dict('list').values())
+            if len(list_done_info) > 0:
+                text += 'Считаем автоматически выполненными:\n'
+                num = 1
+                for task_plan in list_done_info:
+                    task_name = task_plan[0]
+                    text += str(num) + ': ' + task_name + '\n'
+                    num += 1
+                text += '\n'
+
+        #если по пользователю нет изменений, не отправляем сообщение
+        if text == 'Автоматическая обработка задач за сегодня:\n\n':
+            continue
+
+        #формируем итоговый словарь по пользователю
+        user_dict_tomorrow_messages = {'user_id' : user_id
+                                      ,'chat_id' : chat_id
+                                      ,'message' : text
+                                      }
+        list_messages.append(user_dict_tomorrow_messages)
+
+    if len(list_messages) == 0:
+        return response
+
+    response['system_message'] = 'Have reports'
+    response['user_messages'] = list_messages
 
     #реализовать обработку response в app и отправку сообщений пользователям
     return response
