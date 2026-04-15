@@ -38,7 +38,7 @@ def meta(chat_id = None , command = None ,dict_user_data= None):
     report_last_states = ['Отчеты']
     invest_last_states = []
     task_last_states = ['Дела']
-    non_important_move_last_states = ['Перенеси неважные на завтра']
+    non_important_move_last_states = ['Перенеси неважные на завтра', 'Все задачи выполнил']
 
     #определяем первоочередные команды из любого места
     if re.match(primary_commands, command):

@@ -983,6 +983,32 @@ def move_to_tomorrow(chat_id = None , dict_user_data = None):
 
 
 
+def complete_tasks(chat_id = None , dict_user_data = None):
+
+    today_str = today_str_func()
+
+    cur = conn.cursor()
+    response = {'status' : 200
+                ,'report' : 'complete_tasks'
+                ,'system_message' : 'No report'
+                ,'text' : None
+                ,'reply_markup' : None
+                }
+    try:
+        user_id = dict_user_data['user_id']
+
+        cur.execute("update public.tasks set flg_done = True where user_id = %(user_id)s and date_task = '%(today_str)s'" % {'user_id' : user_id , 'today_str' : today_str})
+        conn.commit()
+
+        cur.close()
+        response['text'] = 'Все задачи на сегодня выполнены! ' + emoji('руки_вверх') + emoji('руки_вверх') + emoji('руки_вверх')
+    except:
+        cur.close()
+        response['text'] = 'Что-то пошло не так, не получилось обновить задачи...'
+
+    return response
+
+
 #запись информации по токену для todoist
 def add_external_app(chat_id = None  , external_app = None , external_app_token = None , dict_user_data = None):
     
