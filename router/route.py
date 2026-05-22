@@ -69,7 +69,7 @@ def meta(chat_id = None , command = None ,dict_user_data= None):
         meta_path = 'task'
 
     #определяем перенос на завтра неважных дел
-    elif 'Перенеси неважные на завтра' in command or last_state in non_important_move_last_states:
+    elif 'Перенеси неважные на завтра' in command or 'Все задачи выполнил' in command or  last_state in non_important_move_last_states:
         meta_path = 'move_from_today'
 
     return meta_path
