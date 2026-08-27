@@ -5,6 +5,7 @@ import requests
 import json
 import traceback
 
+import os
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -52,7 +53,7 @@ def webhook():
     url = api + token + '/setWebhook'
     print(url)
     
-    params = {'url' : 'https://176.98.182.72.sslip.io/main'
+    params = {'url' : os.getenv('TELEGRAM_WEBHOOK_URL')
     }
     r = requests.post(url,
                       json=params)
