@@ -52,14 +52,14 @@ def webhook():
     url = api + token + '/setWebhook'
     print(url)
     
-    params = {'url' : 'https://d5dpm6fnp971a1fjon84.cmxivbes.apigw.yandexcloud.net/main'
+    params = {'url' : 'https://176.98.182.72.sslip.io/main'
     }
     r = requests.post(url,
                       json=params)
 
     print(r.status_code)
     print(r.text)
-    return "!", 200
+    return r.text, 200
 
 
 
