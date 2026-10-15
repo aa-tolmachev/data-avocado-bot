@@ -4,6 +4,29 @@ from dicts import meta_info
 
 from methods import reply
 
+from datetime import datetime
+from datetime import timedelta
+
+
+#кнопки с датами - сегодня и следующие 6 дней (только число, например 16 ... 22 или 30, 31, 1, 2)
+def keyboard_days():
+    today = datetime.now()
+    list_days = [str((today + timedelta(days=i)).day) for i in range(7)]
+    return list_days
+
+
+#получаем дату по нажатой кнопке с числом - ищем среди сегодня и следующих 6 дней
+def date_from_day(command = None):
+    today = datetime.now()
+    date_plan = None
+    for i in range(7):
+        day = today + timedelta(days=i)
+        if str(day.day) == command:
+            #если выбрали сегодняшнее число - работаем как с кнопкой сегодня
+            date_plan = 'сегодня' if i == 0 else day.strftime('%Y%m%d')
+    return date_plan
+
+
 def main(command = None , chat_id = None, dict_user_data = None,json_update = None):
 
     text = 'непонимайт...'
@@ -42,7 +65,7 @@ def main(command = None , chat_id = None, dict_user_data = None,json_update = No
         elif state_info_1 == 'Записать дело' and state_info_2 is None:
             r = psql_methods.insert_state_info(chat_id = chat_id , state_info = command , state_id = 2)
             text = 'Ясно-понятно, запомнил! Укажите, в какую дату необходимо сделать данное дело? В формате -> 22.03.1990'
-            reply_markup = {'keyboard': [['сегодня'],['меню']], 'resize_keyboard': True, 'one_time_keyboard': True}
+            reply_markup = {'keyboard': [keyboard_days(),['сегодня'],['меню']], 'resize_keyboard': True, 'one_time_keyboard': True}
 
 
         #4->1->1->1 записываем!
@@ -53,6 +76,19 @@ def main(command = None , chat_id = None, dict_user_data = None,json_update = No
                 reply_markup = reply_markup_main if r['reply_markup'] is None else r['reply_markup']
                 r = psql_methods.clear_state(chat_id = chat_id)
                 r = psql_methods.last_state(chat_id,'/main')
+
+            #нажата кнопка с числом - дата из ближайших 7 дней
+            elif command.isdigit():
+                date_plan = date_from_day(command = command)
+                if date_plan is None:
+                    text = 'Такого числа нет среди ближайших 7 дней, выберите дату на кнопках или напишите в формате -> 22.03.1990'
+                    reply_markup = {'keyboard': [keyboard_days(),['сегодня'],['меню']], 'resize_keyboard': True, 'one_time_keyboard': True}
+                else:
+                    r = psql_methods.add_task(chat_id = chat_id  , date_plan = date_plan , dict_user_data = dict_user_data)
+                    text = r['text']
+                    reply_markup = reply_markup_main if r['reply_markup'] is None else r['reply_markup']
+                    r = psql_methods.clear_state(chat_id = chat_id)
+                    r = psql_methods.last_state(chat_id,'/main')
 
             else:
                 date_list = command.split('.')
