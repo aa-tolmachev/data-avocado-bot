@@ -511,7 +511,7 @@ def list_transaction_plan(chat_id = None  , user_id = None ):
     df_transaction_month = DataFrame(cur.fetchall(), columns=[desc[0] for desc in cur.description])
 
     #формируем итог
-    df_transaction_plan = df_transaction_plan.append(df_transaction_month)
+    df_transaction_plan = pd.concat([df_transaction_plan, df_transaction_month])
 
     #если ничего нет - возвращаем ответ
     if df_transaction_plan.shape[0] == 0:
@@ -609,7 +609,7 @@ def delete_transaction_plan(chat_id = None  , user_id = None , delete_num = None
     df_transaction_month = DataFrame(cur.fetchall(), columns=[desc[0] for desc in cur.description])
 
     #формируем итог
-    df_transaction_plan = df_transaction_plan.append(df_transaction_month)
+    df_transaction_plan = pd.concat([df_transaction_plan, df_transaction_month])
 
     #если ничего нет - возвращаем ответ
     if df_transaction_plan.shape[0] == 0:
@@ -700,7 +700,7 @@ def change_transaction_plan_1(chat_id = None  , user_id = None , change_num = No
     df_transaction_month = DataFrame(cur.fetchall(), columns=[desc[0] for desc in cur.description])
 
     #формируем итог
-    df_transaction_plan = df_transaction_plan.append(df_transaction_month)
+    df_transaction_plan = pd.concat([df_transaction_plan, df_transaction_month])
 
     #если ничего нет - возвращаем ответ
     if df_transaction_plan.shape[0] == 0:
@@ -786,7 +786,7 @@ def change_transaction_plan_2(chat_id = None  , user_id = None , change_num = No
     df_transaction_month = DataFrame(cur.fetchall(), columns=[desc[0] for desc in cur.description])
 
     #формируем итог
-    df_transaction_plan = df_transaction_plan.append(df_transaction_month)
+    df_transaction_plan = pd.concat([df_transaction_plan, df_transaction_month])
 
     #если ничего нет - возвращаем ответ
     if df_transaction_plan.shape[0] == 0:

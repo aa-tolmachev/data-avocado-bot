@@ -88,6 +88,10 @@ def main_woker_1( model = None):
         elif model == 'auto_task_transfer':
             r = auto_task_transfer()
             return r
+        #колесо баланса за текущую неделю
+        elif model == 'balance_circle':
+            r = balance_circle()
+            return r
 
     return 200
 
@@ -121,7 +125,7 @@ def tomorrow_expense():
     df_tomorrow_transaction_month = DataFrame(cur.fetchall(), columns=[desc[0] for desc in cur.description])
 
     #формируем итог
-    df_tomorrow_transaction_plan = df_tomorrow_transaction_plan.append(df_tomorrow_transaction_month).reset_index()[:]
+    df_tomorrow_transaction_plan = pd.concat([df_tomorrow_transaction_plan, df_tomorrow_transaction_month]).reset_index()[:]
 
     if df_tomorrow_transaction_plan.shape[0] == 0:
         cur.close()
@@ -304,12 +308,18 @@ def prev_month_complete_tasks():
 
     if df_prev_month_tasks.shape[0] == 0:
         cur.close()
+        #даже если дел не было - отправляем колесо баланса за месяц
+        list_messages = prev_month_balance_circle()
+        if len(list_messages) == 0:
+            return response
+        response['system_message'] = 'Have reports'
+        response['user_messages'] = list_messages
         return response
     else:
         cur.execute("select id , chat_id from public.user" )
         df_user = DataFrame(cur.fetchall(), columns=[desc[0] for desc in cur.description])
         cur.close()
-        
+
     #подгатавливаем лист с сообщениями
     list_messages = []
     #делаем выборку из пользователей, по кому нужно направить ответ
@@ -373,7 +383,10 @@ def prev_month_complete_tasks():
                                       ,'photo_delete' : True}
         #добавляем инфо в общей список сообщений
         list_messages.append(user_dict_tomorrow_messages)
-        
+
+    #отдельным сообщением добавляем колесо баланса за месяц
+    list_messages += prev_month_balance_circle()
+
     #заполняем информацию по ответу
     response['system_message'] = 'Have reports'
     response['user_messages'] = list_messages
@@ -582,3 +595,222 @@ def auto_task_transfer():
 
     #реализовать обработку response в app и отправку сообщений пользователям
     return response
+
+#колесо баланса за текущую неделю
+def balance_circle():
+
+    #формируем ответ
+    response = {'status' : 200
+                ,'report' : 'balance_circle'
+                ,'message' : 'No reports'
+                ,'tomorrow_messages' : []
+                }
+
+    #получаем текущий год и неделю по ISO
+    today = datetime.now()
+    year_balance = today.isocalendar()[0]
+    week_balance = today.isocalendar()[1]
+    day_of_week = today.isocalendar()[2]
+
+    #текущая дата без времени
+    date_update = today_str_func()
+
+    # создаем запрос
+    cur = conn.cursor()
+
+    #получаем всех пользователей
+    cur.execute("select id , chat_id from public.user" )
+    df_user = DataFrame(cur.fetchall(), columns=[desc[0] for desc in cur.description])
+
+    #смотрим активности за текущую неделю (неделя с понедельника)
+    cur.execute("SELECT user_id , lower(activity_type) as activity_type from public.activities where date_activity >= date_trunc('week', now())" )
+    df_week_activities = DataFrame(cur.fetchall(), columns=[desc[0] for desc in cur.description])
+
+    #подгатавливаем лист с сообщениями
+    list_messages = []
+
+    #проходим по пользователям и считаем колесо баланса
+    for i,row in df_user.iterrows():
+        #получаем данные пользователя
+        user_id = row.id
+        chat_id = row.chat_id
+
+        #получаем активности пользователя за неделю
+        list_activity_type = list(df_week_activities[(df_week_activities.user_id == user_id)]['activity_type'].unique())
+
+        #считаем баланс по категориям
+        balance_work = 0
+        balance_family = 0
+        balance_health = 1 if 'спортзал' in list_activity_type else 0
+        balance_hobby = 1 if ('хобби' in list_activity_type or 'книги' in list_activity_type) else 0
+        balance_rest = 0
+        balance_improvement = 1 if 'развитие' in list_activity_type else 0
+
+        #записываем баланс недели - если строка по неделе есть обновляем, если нет добавляем
+        cur.execute("MERGE INTO public.balance_circle b USING (select %(user_id)s as user_id, %(year_balance)s as year_balance, %(week_balance)s as week_balance) n ON b.user_id = n.user_id and b.year_balance = n.year_balance and b.week_balance = n.week_balance WHEN MATCHED THEN UPDATE SET date_update = '%(date_update)s', balance_work = %(balance_work)s, balance_family = %(balance_family)s, balance_health = %(balance_health)s, balance_hobby = %(balance_hobby)s, balance_rest = %(balance_rest)s, balance_improvement = %(balance_improvement)s WHEN NOT MATCHED THEN INSERT (user_id, year_balance, week_balance, date_update, balance_work, balance_family, balance_health, balance_hobby, balance_rest, balance_improvement) VALUES (%(user_id)s, %(year_balance)s, %(week_balance)s, '%(date_update)s', %(balance_work)s, %(balance_family)s, %(balance_health)s, %(balance_hobby)s, %(balance_rest)s, %(balance_improvement)s)" % {'user_id' : user_id, 'year_balance' : year_balance, 'week_balance' : week_balance, 'date_update' : date_update, 'balance_work' : balance_work, 'balance_family' : balance_family, 'balance_health' : balance_health, 'balance_hobby' : balance_hobby, 'balance_rest' : balance_rest, 'balance_improvement' : balance_improvement} )
+
+        #сообщение с итогом недели отправляем только по воскресеньям
+        if day_of_week != 7:
+            continue
+
+        #считаем сколько категорий из 6 было на неделе
+        cnt_balance = balance_work + balance_family + balance_health + balance_hobby + balance_rest + balance_improvement
+
+        #список категорий, в которых не было баланса
+        list_no_balance = []
+        if balance_work == 0:
+            list_no_balance.append('работа')
+        if balance_family == 0:
+            list_no_balance.append('семья')
+        if balance_health == 0:
+            list_no_balance.append('здоровье')
+        if balance_hobby == 0:
+            list_no_balance.append('хобби')
+        if balance_rest == 0:
+            list_no_balance.append('отдых')
+        if balance_improvement == 0:
+            list_no_balance.append('развитие')
+
+        text = emoji('весы') + ' Колесо баланса за неделю\n\n'
+
+        if cnt_balance == 6:
+            text += 'Идеальный баланс! Ты супер герой! ' + emoji('супергерой') + emoji('огонь') + emoji('авокадо')
+        elif cnt_balance >= 4:
+            text += 'Молодец, отличная неделя! ' + emoji('бицепс') + emoji('огонь')
+        elif cnt_balance >= 2:
+            text += 'Теряем баланс... подумай, чему уделить внимание на следующей неделе ' + emoji('авокадо')
+        else:
+            text += 'Надо улучшить баланс - на следующей неделе удели время всем сферам жизни ' + emoji('ракета')
+
+        if len(list_no_balance) > 0:
+            text += '\n\n' + emoji('сердечко') + ' Пожалуйста, удели этому время: ' + ', '.join(list_no_balance)
+
+        #формируем итоговый словарь по пользователю
+        user_dict_tomorrow_messages = {'user_id' : user_id
+                                      ,'chat_id' : chat_id
+                                      ,'message' : text
+                                      }
+
+        #добавляем инфо
+        list_messages.append(user_dict_tomorrow_messages)
+
+    conn.commit()
+    cur.close()
+
+    if len(list_messages) == 0:
+        return response
+
+    response['system_message'] = 'Have reports'
+    response['user_messages'] = list_messages
+
+    #реализовать обработку response в app и отправку сообщений пользователям
+    return response
+
+
+#колесо баланса за прошлый месяц - отдельное сообщение к отчету по делам за месяц
+def prev_month_balance_circle():
+
+    #подгатавливаем лист с сообщениями
+    list_messages = []
+
+    #получаем месяц, за который составляем отчет
+    month_num_to_names = dict_dates.month_num_to_names
+    prev_month = (datetime.now().replace(day=1) - timedelta(days=1)).month
+    prev_month = month_num_to_names[prev_month]
+
+    # создаем запрос
+    cur = conn.cursor()
+
+    #смотрим колесо баланса по неделям за прошлый месяц
+    cur.execute("select user_id , sum(balance_work) as balance_work , sum(balance_family) as balance_family , sum(balance_health) as balance_health , sum(balance_hobby) as balance_hobby , sum(balance_rest) as balance_rest , sum(balance_improvement) as balance_improvement from public.balance_circle where date_update >= date_trunc('month',now()) - INTERVAL '1MONTH' and date_update < date_trunc('month',now()) group by user_id")
+    df_prev_month_balance = DataFrame(cur.fetchall(), columns=[desc[0] for desc in cur.description])
+
+    if df_prev_month_balance.shape[0] == 0:
+        cur.close()
+        return list_messages
+    else:
+        cur.execute("select id , chat_id from public.user" )
+        df_user = DataFrame(cur.fetchall(), columns=[desc[0] for desc in cur.description])
+        cur.close()
+
+    #делаем выборку из пользователей, по кому нужно направить ответ
+    list_user_id = list(df_prev_month_balance['user_id'].unique())
+    df_user_id = df_user[df_user.id.isin(list_user_id)][:]
+
+    #типы баланса и цвета секторов
+    list_balance_type = ['balance_work','balance_family','balance_health','balance_hobby','balance_rest','balance_improvement']
+    list_balance_names = ['работа','семья','здоровье','хобби','отдых','развитие']
+    list_balance_colors = ['#4F86EC','#D95040','#F2BE42','#58A55C','#EE7531','#65B9C5']
+
+    #проходим по пользователям и формируем отчет
+    for i,row in df_user_id.iterrows():
+        #получаем данные пользователя
+        user_id = row.id
+        chat_id = row.chat_id
+        #получаем данные по определенному пользователю
+        interest_info = df_prev_month_balance[(df_prev_month_balance.user_id == user_id)][:]
+
+        #в месяце считаем 4 недели - больше 4 по типу баланса не засчитываем
+        list_balance_cnt = [min(int(interest_info[balance_type].values[0]), 4) for balance_type in list_balance_type]
+        cnt_balance = sum(list_balance_cnt)
+
+        #формируем отчет - сектор по каждому типу баланса, 1 из 4 = 25% сектора
+        theta = np.arange(len(list_balance_type)) * 2 * np.pi / len(list_balance_type)
+        radii = [x / 4 for x in list_balance_cnt]
+        name_sectors = [name + '\n' + str(int(x / 4 * 100)) + '%' for name, x in zip(list_balance_names, list_balance_cnt)]
+
+        plt.figure(figsize=(5,5))
+        ax = plt.subplot(111, projection='polar')
+        ax.bar(theta, radii, width = 2 * np.pi / len(list_balance_type), color = list_balance_colors, edgecolor = 'white', alpha = 0.9)
+
+        ax.set_facecolor('w')
+        ax.set_theta_zero_location('N')
+        ax.set_theta_direction(-1)
+        ax.set_ylim(0,1)
+        ax.set_yticks([0.25, 0.5, 0.75, 1])
+        ax.set_yticklabels([])
+        ax.set_xticks(theta)
+        ax.set_xticklabels(name_sectors, fontsize=11)
+        ax.tick_params(axis='x', pad=15)
+        ax.xaxis.grid(False)
+        ax.yaxis.grid(color = 'lightgray')
+        ax.spines['polar'].set_color('black')
+        plt.title('Колесо баланса - ' + prev_month, pad = 20)
+
+        #сохраняем картинки по отчетам
+        path = './images/prev_month_complete_tasks/'
+        full_path = path+str(user_id)+'_balance.png'
+        plt.savefig(full_path ,facecolor='w', edgecolor='w' , bbox_inches='tight')
+
+        plt.show()
+        plt.close()
+
+        #формируем текст для отчетика
+        text = emoji('весы') + ' Колесо баланса за ' + prev_month + ': ' + str(cnt_balance) + ' из 24\n\n'
+
+        if cnt_balance == 24:
+            text += 'Идеальный месяц! Ты супер герой! ' + emoji('супергерой') + emoji('огонь') + emoji('авокадо')
+        elif cnt_balance >= 18:
+            text += 'Отличный месяц, баланс держишь крепко! ' + emoji('бицепс') + emoji('огонь')
+        elif cnt_balance >= 12:
+            text += 'Неплохой месяц, но баланс немного шатается ' + emoji('авокадо')
+        else:
+            text += 'Месяц вышел непростым, но новый месяц - новые возможности! ' + emoji('ракета')
+
+        #2 области, которые западают сильнее всего
+        list_weak = sorted([(x, name) for x, name in zip(list_balance_cnt, list_balance_names) if x < 4], key = lambda x: x[0])[:2]
+        list_weak = [name for x, name in list_weak]
+
+        if len(list_weak) > 0:
+            text += '\n\n' + emoji('сердечко') + ' Сильнее всего западает: ' + ' и '.join(list_weak) + '. Удели этому немного времени - у тебя все получится!'
+
+        #формируем итоговый словарь по пользователю по ответу
+        user_dict_tomorrow_messages = {'user_id' : user_id
+                                      ,'chat_id' : chat_id
+                                      ,'message' : text
+                                      ,'photo_path' : full_path
+                                      ,'photo_delete' : True}
+        #добавляем инфо в общей список сообщений
+        list_messages.append(user_dict_tomorrow_messages)
+
+    return list_messages
