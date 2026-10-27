@@ -17,3 +17,8 @@ sudo -i -u postgres
 
 #в постгре делаем пользователя
 #ALTER USER postgres PASSWORD 'новый_пароль';
+
+
+#если pg упал но сам сервер работает попытаться обновить
+pg_lsclusters
+systemctl restart postgresql@16-main
