@@ -1,7 +1,19 @@
+#смотрим версию ubuntu
+lsb_release -rs
+
+#если до 24.04 (например 20.04) - python 3.8, флаг --break-system-packages не нужен (старый pip его не знает)
 sudo apt-get install python3.8
 sudo apt install python3-pip
+pip install flask
+pip install "numpy<2.3" "pandas<2.3"
+pip install psycopg2-binary
+pip install python-dotenv
+pip install matplotlib
+
+#если 24.04 и новее - python 3.12 уже стоит в системе, нужен флаг --break-system-packages
+sudo apt install python3-pip
 pip install flask --break-system-packages
-pip install pandas --break-system-packages
+pip install "numpy<2.3" "pandas<2.3" --break-system-packages
 pip install psycopg2-binary --break-system-packages
 pip install python-dotenv --break-system-packages
 pip install matplotlib --break-system-packages
