@@ -373,7 +373,8 @@ def prev_month_complete_tasks():
         
         #формируем текст для отчетика
         all_month_tasks = sum(res.values)
-        text = 'Поглядим поглядим, что там с делами в предыдущем месце... %s сделано! Молодец, работай над собой! КАМПАЙ!!!' % all_month_tasks
+        text = emoji('график') + ' Динамика задач по неделям\n\n'
+        text += 'Поглядим поглядим, что там с делами в предыдущем месяце... %s сделано! Молодец, работай над собой! КАМПАЙ!!!' % all_month_tasks
         
         #формируем итоговый словарь по пользователю по ответу
         user_dict_tomorrow_messages = {'user_id' : user_id
@@ -638,12 +639,12 @@ def balance_circle():
         #получаем активности пользователя за неделю
         list_activity_type = list(df_week_activities[(df_week_activities.user_id == user_id)]['activity_type'].unique())
 
-        #считаем баланс по категориям
-        balance_work = 0
-        balance_family = 0
-        balance_health = 1 if 'спортзал' in list_activity_type else 0
+        #считаем баланс по категориям - типы из кнопок "Активности" (dialog_branch/activity.py) + типы от внешнего api
+        balance_work = 1 if 'работа' in list_activity_type else 0
+        balance_family = 1 if 'семья' in list_activity_type else 0
+        balance_health = 1 if ('здоровье' in list_activity_type or 'спортзал' in list_activity_type) else 0
         balance_hobby = 1 if ('хобби' in list_activity_type or 'книги' in list_activity_type) else 0
-        balance_rest = 0
+        balance_rest = 1 if 'отдых' in list_activity_type else 0
         balance_improvement = 1 if 'развитие' in list_activity_type else 0
 
         #записываем баланс недели - если строка по неделе есть обновляем, если нет добавляем

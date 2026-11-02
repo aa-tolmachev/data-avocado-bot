@@ -1009,6 +1009,37 @@ def complete_tasks(chat_id = None , dict_user_data = None):
     return response
 
 
+#запись активности пользователя - используется в колесе баланса
+def add_activity(chat_id = None , activity_type = None , activity_from = 'telegram' , dict_user_data = None):
+
+    # создаем запрос
+    cur = conn.cursor()
+    #формат ответа
+    response = {'status' : 200
+                ,'report' : 'add_activity'
+                ,'system_message' : 'No report'
+                ,'text' : None
+                ,'reply_markup' : None
+                }
+    try:
+        #получаем входные данные
+        user_id = dict_user_data['user_id']
+        #получаем время записи
+        now = now_str()
+
+        cur.execute("INSERT INTO public.activities (user_id, date_activity, activity_type, activity_from) VALUES (%(user_id)s, '%(now)s', '%(activity_type)s', '%(activity_from)s')" % {'user_id' : user_id , 'now' : now , 'activity_type' : activity_type , 'activity_from' : activity_from} )
+        conn.commit()
+        cur.close()
+
+        response['text'] = 'Записано! ' + emoji('галочка') + ' Активность "' + activity_type + '" засчитана в колесо баланса этой недели. Что-то еще?'
+
+    except:
+        cur.close()
+        response['text'] = 'Что-то пошло не так, не получилось записать...'
+
+    return response
+
+
 #запись информации по токену для todoist
 def add_external_app(chat_id = None  , external_app = None , external_app_token = None , dict_user_data = None):
     
